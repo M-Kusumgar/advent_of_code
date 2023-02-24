@@ -50,7 +50,9 @@ fn find_max_cal(exclude: Vec<u32>) -> [u32;2] {
             new_line_count = 0;
         }
     };
-
+    
+    // repeat last time since last entry is not
+    // followed by two newlines
     let actual_num = curr_num.parse::<u32>().unwrap();
     curr_total_cal += actual_num;
     if curr_total_cal > max_total_cal {
