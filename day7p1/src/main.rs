@@ -1,66 +1,61 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 fn main() {
     // I REFUSE TO USE REFCELL, RC, ARC, MUTEX, ETC.
     // FIGHT ME
-    let x = "$ cd /
-    $ ls
-    dir a
-    14848514 b.txt
-    8504156 c.dat
-    dir d
-    $ cd a
-    $ ls
-    dir e
-    29116 f
-    2557 g
-    62596 h.lst
-    $ cd e
-    $ ls
-    584 i
-    $ cd ..
-    $ cd ..
-    $ cd d
-    $ ls
-    4060174 j
-    8033020 d.log
-    5626152 d.ext
-    7214296 k";
+    let x = input_string();
     let terminal_lines = x.lines();
-    let mut storage_data: HashMap<Vec<&str>, (Vec<&str>, Vec<i32>)> = HashMap::new();
+    let mut storage_data: IndexMap<Vec<&str>, (Vec<&str>, Vec<i32>)> = IndexMap::new();
     let mut curr_dir = vec![];
     let mut curr_dir_files = vec![];
     let mut curr_dir_dirs = vec![];
-    let mut size_of_dirs: HashMap<Vec<&str>, i32> = HashMap::new();
     for line in terminal_lines {
         let clean_line = line
             .trim()
             .split(" ")
             .collect::<Vec<&str>>();
         if &clean_line[..2] == ["$", "cd"] {
-            let copy_curr_dir = curr_dir.clone();
-            let copy_curr_dir_dirs = curr_dir_dirs.clone();
-            let copy_curr_dir_files = curr_dir_files.clone();
-            storage_data.insert(copy_curr_dir, (copy_curr_dir_dirs, copy_curr_dir_files));
+            if !storage_data.contains_key(&curr_dir) {
+                storage_data.insert(curr_dir.clone(), (curr_dir_dirs.clone(), curr_dir_files.clone()));
+            }
             if clean_line[2] == ".." {
                 curr_dir.pop();
             } else {
                 curr_dir.push(clean_line[2]);
+                curr_dir_files.drain(..);
+                curr_dir_dirs.drain(..);
             }
-            curr_dir_files = vec![];
-            curr_dir_dirs = vec![];
         } else if &clean_line[..2] == ["$", "ls"] {
             continue;
         } else if clean_line[0] == "dir" {
-            curr_dir_dirs.push(&clean_line[1]);
+            curr_dir_dirs.push(clean_line[1]);
         } else {
             curr_dir_files.push(clean_line[0]
                 .parse::<i32>()
                 .unwrap());
         }
     }
-    storage_data.insert(curr_dir, (curr_dir_dirs, curr_dir_files));
-    println!("{:?}", storage_data)
+    if !storage_data.contains_key(&curr_dir) {
+        storage_data.insert(curr_dir.clone(), (curr_dir_dirs.clone(), curr_dir_files.clone()));
+    }
+    let mut size_of_dirs: IndexMap<Vec<&str>, i32> = IndexMap::new();
+    for (directory, (dirs, files)) in storage_data.iter().rev() {
+        let mut total_file_size = 0;
+        total_file_size += files.iter().sum::<i32>();
+        for sub_dir in dirs {
+            let mut copy_directory = directory.clone();
+            copy_directory.push(sub_dir);
+            total_file_size += size_of_dirs[&copy_directory];
+        }
+        size_of_dirs.insert(directory.to_vec(), total_file_size);
+    }
+    let mut final_answer = 0;
+    for (_, size) in size_of_dirs {
+        if size <= 100000 {
+            final_answer += size;
+        }
+    }
+    println!("{}", final_answer);
 }
 
 fn input_string() -> &'static str {
